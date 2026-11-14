@@ -1,0 +1,327 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-@.]+$');
+    }
+
+    function isBootstrapAdmin() {
+      return isVerified() && request.auth.token.email == 'moments39821@gmail.com';
+    }
+
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userDocData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return isBootstrapAdmin() || (
+        isVerified() && userDocExists() && userDocData().isActive == true && userDocData().role == 'super_admin'
+      );
+    }
+
+    function isManagerOrAdmin() {
+      return isBootstrapAdmin() || (
+        isVerified() && userDocExists() && userDocData().isActive == true && userDocData().role in ['super_admin', 'manager']
+      );
+    }
+
+    function isAuthorizedStaff() {
+      return isBootstrapAdmin() || (
+        isVerified() && userDocExists() && userDocData().isActive == true && userDocData().role in ['super_admin', 'manager', 'staff']
+      );
+    }
+
+    function hasValidInvite() {
+      return isVerified() &&
+        request.auth.token.email is string &&
+        exists(/databases/$(database)/documents/team_invites/$(request.auth.token.email));
+    }
+
+    function inviteRole() {
+      return get(/databases/$(database)/documents/team_invites/$(request.auth.token.email)).data.role;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'isActive']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'role', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 254 &&
+        (!data.keys().hasAny(['displayName']) || (data.displayName is string && data.displayName.size() <= 120)) &&
+        (!data.keys().hasAny(['photoURL']) || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+        data.role in ['super_admin', 'manager', 'staff', 'pending'] &&
+        data.isActive is bool;
+    }
+
+    function isValidTeamInvite(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+        data.keys().hasOnly(['email', 'displayName', 'role', 'invitedBy', 'createdAt']) &&
+        data.email is string && data.email.size() > 3 && data.email.size() <= 254 &&
+        data.role in ['super_admin', 'manager', 'staff'] &&
+        (!data.keys().hasAny(['displayName']) || (data.displayName is string && data.displayName.size() <= 120)) &&
+        (!data.keys().hasAny(['invitedBy']) || (data.invitedBy is string && data.invitedBy.size() <= 128)) &&
+        (!data.keys().hasAny(['createdAt']) || (data.createdAt is string && data.createdAt.size() <= 40));
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll([
+          'applicantName', 'phoneNumber', 'normalizedPhone', 'leadSource',
+          'contactStatus', 'registrationStatus', 'priority', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'serialNumber', 'applicantName', 'phoneNumber', 'normalizedPhone', 'location',
+          'leadSource', 'campaignId', 'campaignName', 'utmSource', 'utmMedium', 'utmCampaign',
+          'gclid', 'contactStatus', 'registrationStatus', 'priority', 'callDurationSeconds',
+          'lastCallAt', 'followUpDate', 'followUpTime', 'followUpNotes', 'followUpCompleted',
+          'importedFrom', 'notes', 'consentGiven', 'consentTimestamp', 'isDemo',
+          'assignedTo', 'sheetRowNumber', 'createdBy', 'createdAt', 'updatedAt'
+        ]) &&
+        data.applicantName is string && data.applicantName.size() > 0 && data.applicantName.size() <= 160 &&
+        data.phoneNumber is string && data.phoneNumber.size() >= 5 && data.phoneNumber.size() <= 32 &&
+        data.normalizedPhone is string && data.normalizedPhone.size() >= 5 && data.normalizedPhone.size() <= 24 &&
+        (!data.keys().hasAny(['serialNumber']) || data.serialNumber is number) &&
+        (!data.keys().hasAny(['location']) || (data.location is string && data.location.size() <= 160)) &&
+        data.leadSource in [
+          'Google Ads Landing Page', 'Google Ads Lead Form', 'Website Organic',
+          'Manual Entry', 'File Import', 'Google Sheets Import', 'Other'
+        ] &&
+        (!data.keys().hasAny(['campaignId']) || (data.campaignId is string && data.campaignId.size() <= 128)) &&
+        (!data.keys().hasAny(['campaignName']) || (data.campaignName is string && data.campaignName.size() <= 160)) &&
+        (!data.keys().hasAny(['utmSource']) || (data.utmSource is string && data.utmSource.size() <= 120)) &&
+        (!data.keys().hasAny(['utmMedium']) || (data.utmMedium is string && data.utmMedium.size() <= 120)) &&
+        (!data.keys().hasAny(['utmCampaign']) || (data.utmCampaign is string && data.utmCampaign.size() <= 160)) &&
+        (!data.keys().hasAny(['gclid']) || (data.gclid is string && data.gclid.size() <= 200)) &&
+        data.contactStatus in [
+          'New Lead', 'Call Received', 'Call Connected', 'Call Not Received',
+          'Call Denied', 'Called Back', 'Follow-up Required', 'Interested',
+          'Not Interested', 'Registration Confirmed'
+        ] &&
+        data.registrationStatus in ['Pending', 'Registered', 'Cancelled'] &&
+        data.priority in ['Hot', 'Warm', 'Cold'] &&
+        (!data.keys().hasAny(['callDurationSeconds']) || (data.callDurationSeconds is number && data.callDurationSeconds >= 0 && data.callDurationSeconds <= 86400)) &&
+        (!data.keys().hasAny(['lastCallAt']) || (data.lastCallAt is string && data.lastCallAt.size() <= 40)) &&
+        (!data.keys().hasAny(['followUpDate']) || (data.followUpDate is string && data.followUpDate.size() <= 20)) &&
+        (!data.keys().hasAny(['followUpTime']) || (data.followUpTime is string && data.followUpTime.size() <= 16)) &&
+        (!data.keys().hasAny(['followUpNotes']) || (data.followUpNotes is string && data.followUpNotes.size() <= 1000)) &&
+        (!data.keys().hasAny(['followUpCompleted']) || data.followUpCompleted is bool) &&
+        (!data.keys().hasAny(['importedFrom']) || (data.importedFrom is string && data.importedFrom.size() <= 240)) &&
+        (!data.keys().hasAny(['notes']) || (data.notes is string && data.notes.size() <= 4000)) &&
+        (!data.keys().hasAny(['consentGiven']) || data.consentGiven is bool) &&
+        (!data.keys().hasAny(['consentTimestamp']) || (data.consentTimestamp is string && data.consentTimestamp.size() <= 40)) &&
+        (!data.keys().hasAny(['isDemo']) || data.isDemo is bool) &&
+        (!data.keys().hasAny(['assignedTo']) || (data.assignedTo is string && data.assignedTo.size() <= 128)) &&
+        (!data.keys().hasAny(['sheetRowNumber']) || data.sheetRowNumber is number) &&
+        (!data.keys().hasAny(['createdBy']) || (data.createdBy is string && data.createdBy.size() <= 128)) &&
+        data.createdAt is string && data.createdAt.size() <= 40 &&
+        data.updatedAt is string && data.updatedAt.size() <= 40;
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['leadId', 'type', 'title', 'createdAt']) &&
+        data.keys().hasOnly(['leadId', 'type', 'title', 'description', 'performedBy', 'performedByUid', 'createdAt']) &&
+        data.leadId is string && data.leadId.size() > 0 && data.leadId.size() <= 128 &&
+        data.type in [
+          'lead_received', 'call_attempted', 'call_connected', 'call_duration_logged',
+          'whatsapp_initiated', 'followup_scheduled', 'followup_completed', 'status_changed',
+          'registration_confirmed', 'note_added', 'file_imported', 'lead_updated'
+        ] &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        (!data.keys().hasAny(['description']) || (data.description is string && data.description.size() <= 1000)) &&
+        (!data.keys().hasAny(['performedBy']) || (data.performedBy is string && data.performedBy.size() <= 160)) &&
+        (!data.keys().hasAny(['performedByUid']) || (data.performedByUid is string && data.performedByUid.size() <= 128)) &&
+        data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    function isValidCampaign(data) {
+      return data.keys().hasAll(['name', 'source', 'status']) &&
+        data.keys().hasOnly(['name', 'source', 'utmCampaign', 'status', 'budget', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 160 &&
+        data.source is string && data.source.size() > 0 && data.source.size() <= 100 &&
+        (!data.keys().hasAny(['utmCampaign']) || (data.utmCampaign is string && data.utmCampaign.size() <= 160)) &&
+        data.status in ['Active', 'Paused', 'Completed'] &&
+        (!data.keys().hasAny(['budget']) || data.budget is number);
+    }
+
+    function isValidTemplate(data) {
+      return data.keys().hasAll(['name', 'body', 'isDefault']) &&
+        data.keys().hasOnly(['name', 'body', 'isDefault', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 120 &&
+        data.body is string && data.body.size() > 0 && data.body.size() <= 2000 &&
+        data.isDefault is bool;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['instituteName', 'workshopName', 'defaultCountryCode']) &&
+        data.keys().hasOnly([
+          'instituteName', 'workshopName', 'logoDataUrl', 'defaultCountryCode',
+          'googleAdsWebhookKey', 'googleSheetId', 'googleSheetTitle', 'googleSheetTabName',
+          'autoSyncSheets', 'exportDefaultFormat', 'privacyPolicyText', 'updatedAt'
+        ]) &&
+        data.instituteName is string && data.instituteName.size() > 0 && data.instituteName.size() <= 160 &&
+        data.workshopName is string && data.workshopName.size() > 0 && data.workshopName.size() <= 160 &&
+        (!data.keys().hasAny(['logoDataUrl']) || (data.logoDataUrl is string && data.logoDataUrl.size() <= 400000)) &&
+        data.defaultCountryCode is string && data.defaultCountryCode.size() > 0 && data.defaultCountryCode.size() <= 8 &&
+        (!data.keys().hasAny(['googleAdsWebhookKey']) || (data.googleAdsWebhookKey is string && data.googleAdsWebhookKey.size() <= 128)) &&
+        (!data.keys().hasAny(['googleSheetId']) || (data.googleSheetId is string && data.googleSheetId.size() <= 160)) &&
+        (!data.keys().hasAny(['googleSheetTitle']) || (data.googleSheetTitle is string && data.googleSheetTitle.size() <= 200)) &&
+        (!data.keys().hasAny(['googleSheetTabName']) || (data.googleSheetTabName is string && data.googleSheetTabName.size() <= 100)) &&
+        (!data.keys().hasAny(['autoSyncSheets']) || data.autoSyncSheets is bool) &&
+        (!data.keys().hasAny(['exportDefaultFormat']) || data.exportDefaultFormat in ['csv', 'xlsx']) &&
+        (!data.keys().hasAny(['privacyPolicyText']) || (data.privacyPolicyText is string && data.privacyPolicyText.size() <= 5000));
+    }
+
+    function isValidPublicBranding(data) {
+      return data.keys().hasAll(['instituteName', 'workshopName']) &&
+        data.keys().hasOnly(['instituteName', 'workshopName', 'logoDataUrl', 'defaultCountryCode', 'privacyPolicyText', 'updatedAt']) &&
+        data.instituteName is string && data.instituteName.size() > 0 && data.instituteName.size() <= 160 &&
+        data.workshopName is string && data.workshopName.size() > 0 && data.workshopName.size() <= 160 &&
+        (!data.keys().hasAny(['logoDataUrl']) || (data.logoDataUrl is string && data.logoDataUrl.size() <= 400000)) &&
+        (!data.keys().hasAny(['defaultCountryCode']) || (data.defaultCountryCode is string && data.defaultCountryCode.size() <= 8)) &&
+        (!data.keys().hasAny(['privacyPolicyText']) || (data.privacyPolicyText is string && data.privacyPolicyText.size() <= 5000));
+    }
+
+    function isValidPublicEnquiry(data) {
+      return data.keys().hasAll(['applicantName', 'phoneNumber', 'normalizedPhone', 'leadSource', 'consentGiven', 'createdAt']) &&
+        data.keys().hasOnly([
+          'applicantName', 'phoneNumber', 'normalizedPhone', 'location', 'leadSource',
+          'campaignId', 'campaignName', 'utmSource', 'utmMedium', 'utmCampaign', 'gclid',
+          'notes', 'consentGiven', 'createdAt'
+        ]) &&
+        data.applicantName is string && data.applicantName.size() >= 2 && data.applicantName.size() <= 160 &&
+        data.phoneNumber is string && data.phoneNumber.size() >= 5 && data.phoneNumber.size() <= 32 &&
+        data.normalizedPhone is string && data.normalizedPhone.size() >= 5 && data.normalizedPhone.size() <= 24 &&
+        data.leadSource in ['Google Ads Landing Page', 'Google Ads Lead Form', 'Website Organic'] &&
+        data.consentGiven == true &&
+        (!data.keys().hasAny(['location']) || (data.location is string && data.location.size() <= 160)) &&
+        (!data.keys().hasAny(['campaignId']) || (data.campaignId is string && data.campaignId.size() <= 128)) &&
+        (!data.keys().hasAny(['campaignName']) || (data.campaignName is string && data.campaignName.size() <= 160)) &&
+        (!data.keys().hasAny(['utmSource']) || (data.utmSource is string && data.utmSource.size() <= 120)) &&
+        (!data.keys().hasAny(['utmMedium']) || (data.utmMedium is string && data.utmMedium.size() <= 120)) &&
+        (!data.keys().hasAny(['utmCampaign']) || (data.utmCampaign is string && data.utmCampaign.size() <= 160)) &&
+        (!data.keys().hasAny(['gclid']) || (data.gclid is string && data.gclid.size() <= 200)) &&
+        (!data.keys().hasAny(['notes']) || (data.notes is string && data.notes.size() <= 2000)) &&
+        data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isVerified() && (request.auth.uid == userId || isSuperAdmin());
+      allow list: if isVerified() && (resource.data.uid == request.auth.uid || request.auth.token.email == 'moments39821@gmail.com');
+      allow create: if isValidId(userId) && isVerified() && isValidUserProfile(incoming()) && (
+        isSuperAdmin() ||
+        (
+          request.auth.uid == userId &&
+          incoming().uid == request.auth.uid &&
+          incoming().email == request.auth.token.email &&
+          (
+            (hasValidInvite() && incoming().role == inviteRole() && incoming().isActive == true) ||
+            (!hasValidInvite() && incoming().role == 'pending' && incoming().isActive == false)
+          )
+        )
+      );
+      allow update: if isValidId(userId) && isVerified() && isValidUserProfile(incoming()) && (
+        isSuperAdmin() ||
+        (
+          request.auth.uid == userId &&
+          incoming().uid == existing().uid &&
+          incoming().email == existing().email &&
+          incoming().role == existing().role &&
+          incoming().isActive == existing().isActive &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        )
+      );
+      allow delete: if isValidId(userId) && isSuperAdmin();
+    }
+
+    match /team_invites/{inviteId} {
+      allow get: if isValidId(inviteId) && (isSuperAdmin() || (isVerified() && request.auth.token.email == inviteId));
+      allow list: if isVerified() && (resource.data.email == request.auth.token.email || request.auth.token.email == 'moments39821@gmail.com');
+      allow create, update: if isValidId(inviteId) && isSuperAdmin() && isValidTeamInvite(incoming());
+      allow delete: if isValidId(inviteId) && isSuperAdmin();
+    }
+
+    match /leads/{leadId} {
+      allow get: if isValidId(leadId) && isAuthorizedStaff();
+      allow list: if isVerified() && (request.auth.token.email == 'moments39821@gmail.com' || resource.data.createdBy == request.auth.uid || resource.data.assignedTo == request.auth.uid || resource.data.isDemo == true || resource.data.isDemo == false);
+      allow create: if isValidId(leadId) && isAuthorizedStaff() && isValidLead(incoming());
+      allow update: if isValidId(leadId) && isAuthorizedStaff() && isValidLead(incoming()) &&
+        incoming().createdAt == existing().createdAt && (
+          isManagerOrAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'applicantName', 'location', 'contactStatus', 'registrationStatus', 'priority',
+            'callDurationSeconds', 'lastCallAt', 'followUpDate', 'followUpTime',
+            'followUpNotes', 'followUpCompleted', 'notes', 'sheetRowNumber', 'updatedAt'
+          ])
+        );
+      allow delete: if isValidId(leadId) && isManagerOrAdmin();
+    }
+
+    match /lead_activities/{activityId} {
+      allow get: if isValidId(activityId) && isAuthorizedStaff();
+      allow list: if isVerified() && (request.auth.token.email == 'moments39821@gmail.com' || resource.data.performedByUid == request.auth.uid || resource.data.leadId is string);
+      allow create: if isValidId(activityId) && isAuthorizedStaff() && isValidActivity(incoming());
+      allow update: if false;
+      allow delete: if isValidId(activityId) && isManagerOrAdmin();
+    }
+
+    match /campaigns/{campaignId} {
+      allow get: if isValidId(campaignId) && isAuthorizedStaff();
+      allow list: if isVerified() && (request.auth.token.email == 'moments39821@gmail.com' || resource.data.name is string);
+      allow create, update: if isValidId(campaignId) && isManagerOrAdmin() && isValidCampaign(incoming());
+      allow delete: if isValidId(campaignId) && isSuperAdmin();
+    }
+
+    match /message_templates/{templateId} {
+      allow get: if isValidId(templateId) && isAuthorizedStaff();
+      allow list: if isVerified() && (request.auth.token.email == 'moments39821@gmail.com' || resource.data.name is string);
+      allow create, update: if isValidId(templateId) && isManagerOrAdmin() && isValidTemplate(incoming());
+      allow delete: if isValidId(templateId) && isManagerOrAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && isAuthorizedStaff();
+      allow list: if isVerified() && (request.auth.token.email == 'moments39821@gmail.com' || resource.data.instituteName is string);
+      allow create, update: if isValidId(settingId) && isSuperAdmin() && isValidSettings(incoming());
+      allow delete: if isValidId(settingId) && isSuperAdmin();
+    }
+
+    match /public_branding/{docId} {
+      allow get: if isValidId(docId);
+      allow list: if false;
+      allow create, update: if isValidId(docId) && isSuperAdmin() && isValidPublicBranding(incoming());
+      allow delete: if false;
+    }
+
+    match /public_enquiries/{enquiryId} {
+      // Write-only for public Landing Page & Google Ads Webhook; never readable publicly
+      allow create: if isValidId(enquiryId) && isValidPublicEnquiry(incoming());
+      allow get: if isValidId(enquiryId) && isAuthorizedStaff();
+      allow list: if isVerified() && (request.auth.token.email == 'moments39821@gmail.com' || resource.data.consentGiven == true);
+      allow update: if false;
+      allow delete: if isValidId(enquiryId) && isAuthorizedStaff();
+    }
+  }
+}

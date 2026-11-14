@@ -1,0 +1,6 @@
+{
+  "name": "Yantra Workshop CRM – Shri V.M. Joshi Institute",
+  "description": "Smart Lead Management CRM for Shri V.M. Joshi Institute's Yantra Shastra Masterclass, featuring Google Ads lead capture, WhatsApp & click-to-call follow-ups, multi-format data migration, and Google Sheets sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: #F8F7F4;
+    color: #1E1C1A;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle Yantra geometric grid background for login / hero accents */
+.yantra-subtle-grid {
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(176, 137, 66, 0.06) 0%, transparent 65%),
+    linear-gradient(to right, rgba(30, 28, 26, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 28, 26, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+}
+
+/* Official Google Sign-In Material Button styling */
+.gsi-material-button {
+  user-select: none;
+  background-color: #FFFFFF;
+  border: 1px solid #D6D0C4;
+  border-radius: 8px;
+  color: #1E1C1A;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  height: 44px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gsi-material-button:hover:not(:disabled) {
+  background-color: #FBF9F5;
+  border-color: #B08942;
+  box-shadow: 0 2px 6px rgba(30, 28, 26, 0.06);
+}
+
+.gsi-material-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

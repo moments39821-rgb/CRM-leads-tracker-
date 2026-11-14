@@ -1,0 +1,263 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authorized CRM administrator, manager, or staff member profile.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "displayName": { "type": "string", "maxLength": 120 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "role": { "type": "string", "enum": ["super_admin", "manager", "staff", "pending"] },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "isActive"]
+    },
+    "TeamInvite": {
+      "title": "TeamInvite",
+      "description": "Pre-authorized staff email invite and role assignment.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "displayName": { "type": "string", "maxLength": 120 },
+        "role": { "type": "string", "enum": ["super_admin", "manager", "staff"] },
+        "invitedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Workshop applicant lead captured from Google Ads, landing page, manual entry, or file import.",
+      "type": "object",
+      "properties": {
+        "serialNumber": { "type": "number" },
+        "applicantName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "phoneNumber": { "type": "string", "minLength": 5, "maxLength": 32 },
+        "normalizedPhone": { "type": "string", "minLength": 5, "maxLength": 24 },
+        "location": { "type": "string", "maxLength": 160 },
+        "leadSource": {
+          "type": "string",
+          "enum": [
+            "Google Ads Landing Page",
+            "Google Ads Lead Form",
+            "Website Organic",
+            "Manual Entry",
+            "File Import",
+            "Google Sheets Import",
+            "Other"
+          ]
+        },
+        "campaignId": { "type": "string", "maxLength": 128 },
+        "campaignName": { "type": "string", "maxLength": 160 },
+        "utmSource": { "type": "string", "maxLength": 120 },
+        "utmMedium": { "type": "string", "maxLength": 120 },
+        "utmCampaign": { "type": "string", "maxLength": 160 },
+        "gclid": { "type": "string", "maxLength": 200 },
+        "contactStatus": {
+          "type": "string",
+          "enum": [
+            "New Lead",
+            "Call Received",
+            "Call Connected",
+            "Call Not Received",
+            "Call Denied",
+            "Called Back",
+            "Follow-up Required",
+            "Interested",
+            "Not Interested",
+            "Registration Confirmed"
+          ]
+        },
+        "registrationStatus": {
+          "type": "string",
+          "enum": ["Pending", "Registered", "Cancelled"]
+        },
+        "priority": { "type": "string", "enum": ["Hot", "Warm", "Cold"] },
+        "callDurationSeconds": { "type": "number" },
+        "lastCallAt": { "type": "string", "maxLength": 40 },
+        "followUpDate": { "type": "string", "maxLength": 20 },
+        "followUpTime": { "type": "string", "maxLength": 16 },
+        "followUpNotes": { "type": "string", "maxLength": 1000 },
+        "followUpCompleted": { "type": "boolean" },
+        "importedFrom": { "type": "string", "maxLength": 240 },
+        "notes": { "type": "string", "maxLength": 4000 },
+        "consentGiven": { "type": "boolean" },
+        "consentTimestamp": { "type": "string", "maxLength": 40 },
+        "isDemo": { "type": "boolean" },
+        "assignedTo": { "type": "string", "maxLength": 128 },
+        "sheetRowNumber": { "type": "number" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "applicantName",
+        "phoneNumber",
+        "normalizedPhone",
+        "leadSource",
+        "contactStatus",
+        "registrationStatus",
+        "priority",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LeadActivity": {
+      "title": "LeadActivity",
+      "description": "Chronological activity log entry for a workshop lead.",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "type": {
+          "type": "string",
+          "enum": [
+            "lead_received",
+            "call_attempted",
+            "call_connected",
+            "call_duration_logged",
+            "whatsapp_initiated",
+            "followup_scheduled",
+            "followup_completed",
+            "status_changed",
+            "registration_confirmed",
+            "note_added",
+            "file_imported",
+            "lead_updated"
+          ]
+        },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "performedBy": { "type": "string", "maxLength": 160 },
+        "performedByUid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["leadId", "type", "title", "createdAt"]
+    },
+    "Campaign": {
+      "title": "Campaign",
+      "description": "Google Ads or marketing campaign tracked in the CRM.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "source": { "type": "string", "maxLength": 100 },
+        "utmCampaign": { "type": "string", "maxLength": 160 },
+        "status": { "type": "string", "enum": ["Active", "Paused", "Completed"] },
+        "budget": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "source", "status"]
+    },
+    "MessageTemplate": {
+      "title": "MessageTemplate",
+      "description": "Customizable WhatsApp follow-up message template.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "body": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "body", "isDefault"]
+    },
+    "WorkshopSettings": {
+      "title": "WorkshopSettings",
+      "description": "Global settings for Shri V.M. Joshi Institute Yantra Workshop CRM.",
+      "type": "object",
+      "properties": {
+        "instituteName": { "type": "string", "maxLength": 160 },
+        "workshopName": { "type": "string", "maxLength": 160 },
+        "logoDataUrl": { "type": "string", "maxLength": 400000 },
+        "defaultCountryCode": { "type": "string", "maxLength": 8 },
+        "googleAdsWebhookKey": { "type": "string", "maxLength": 128 },
+        "googleSheetId": { "type": "string", "maxLength": 160 },
+        "googleSheetTitle": { "type": "string", "maxLength": 200 },
+        "googleSheetTabName": { "type": "string", "maxLength": 100 },
+        "autoSyncSheets": { "type": "boolean" },
+        "exportDefaultFormat": { "type": "string", "enum": ["csv", "xlsx"] },
+        "privacyPolicyText": { "type": "string", "maxLength": 5000 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["instituteName", "workshopName", "defaultCountryCode"]
+    },
+    "PublicBranding": {
+      "title": "PublicBranding",
+      "description": "Non-sensitive institute branding and privacy policy for login and public landing page.",
+      "type": "object",
+      "properties": {
+        "instituteName": { "type": "string", "maxLength": 160 },
+        "workshopName": { "type": "string", "maxLength": 160 },
+        "logoDataUrl": { "type": "string", "maxLength": 400000 },
+        "defaultCountryCode": { "type": "string", "maxLength": 8 },
+        "privacyPolicyText": { "type": "string", "maxLength": 5000 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["instituteName", "workshopName"]
+    },
+    "PublicEnquiry": {
+      "title": "PublicEnquiry",
+      "description": "Write-only incoming enquiry queue from Google Ads Landing Page and Webhooks.",
+      "type": "object",
+      "properties": {
+        "applicantName": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "phoneNumber": { "type": "string", "minLength": 5, "maxLength": 32 },
+        "normalizedPhone": { "type": "string", "minLength": 5, "maxLength": 24 },
+        "location": { "type": "string", "maxLength": 160 },
+        "leadSource": { "type": "string", "maxLength": 80 },
+        "campaignId": { "type": "string", "maxLength": 128 },
+        "campaignName": { "type": "string", "maxLength": 160 },
+        "utmSource": { "type": "string", "maxLength": 120 },
+        "utmMedium": { "type": "string", "maxLength": 120 },
+        "utmCampaign": { "type": "string", "maxLength": 160 },
+        "gclid": { "type": "string", "maxLength": 200 },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "consentGiven": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["applicantName", "phoneNumber", "normalizedPhone", "leadSource", "consentGiven", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "CRM user profiles and role-based access records."
+    },
+    "/team_invites/{inviteId}": {
+      "schema": { "$ref": "#/entities/TeamInvite" },
+      "description": "Email invites for Manager and Staff members."
+    },
+    "/leads/{leadId}": {
+      "schema": { "$ref": "#/entities/Lead" },
+      "description": "Workshop leads captured from Google Ads, manual entry, or file imports."
+    },
+    "/lead_activities/{activityId}": {
+      "schema": { "$ref": "#/entities/LeadActivity" },
+      "description": "Activity timeline events associated with leads."
+    },
+    "/campaigns/{campaignId}": {
+      "schema": { "$ref": "#/entities/Campaign" },
+      "description": "Google Ads and marketing campaigns."
+    },
+    "/message_templates/{templateId}": {
+      "schema": { "$ref": "#/entities/MessageTemplate" },
+      "description": "WhatsApp follow-up message templates."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/WorkshopSettings" },
+      "description": "Institute and integration configuration documents."
+    },
+    "/public_branding/{docId}": {
+      "schema": { "$ref": "#/entities/PublicBranding" },
+      "description": "Publicly readable non-sensitive workshop branding."
+    },
+    "/public_enquiries/{enquiryId}": {
+      "schema": { "$ref": "#/entities/PublicEnquiry" },
+      "description": "Write-only intake queue for Landing Page and Google Ads Webhook leads."
+    }
+  }
+}
